@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
-
+const bcrypt = require('bcryptjs');
+// usermodel:
+const User = require('../models/User');
 
 // login routes
 router.get('/login', (req, res)=>{
@@ -37,7 +39,49 @@ router.post('/register', (req,res)=>{
 			errors, name, email, password, password2
 		});
 	}else{
-		res.send('pass');
+		// res.send('pass');
+
+		// validation passed:
+		/**/
+
+		// make sure the user doesnt exist. findOne is a mongoose method
+		User.findOne({email: email})
+			.then(user =>{
+				if(user){
+					// user does exist:
+					errors.push({msg: 'Emial is already registered'})
+					res.render('register', {
+						errors, name, email, password, password2	
+					})
+				}else{
+					// user doesnt exist, so we create a new one.
+					const newUser = new User({
+						name,
+						email,
+						password
+					});
+
+					// console.log(newUser);
+					// res.send('hello');
+
+					// hash:
+					bcrypt.genSalt(10, (err, salt)=> 
+						bcrypt.hash(newUser.password, salt, (err, hash)=>{
+							if(err){
+								throw err;
+							}
+
+							newUser.password = hash;
+
+							// save the user:
+							newUser.save()
+								.then(user=>{
+									res.redirect('users/login')
+								})
+								.catch(err => console.log(err))
+						}))
+				}
+			})//end of then
 	}
 })
 
